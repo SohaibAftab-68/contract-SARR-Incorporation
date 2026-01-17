@@ -164,16 +164,35 @@ border-radius:12px;
 <label><input type="checkbox" data-price="75000"> YouTube Content Pack (75,000)</label>
 </div>
 
-<h3>Payment</h3>
-<input id="baseMonthly" class="locked" placeholder="Base Monthly Charges" readonly>
-<input id="commission" placeholder="Commission / Adjustment" type="number" oninput="calculateTotal()">
-<input id="finalMonthly" class="locked" placeholder="Final Monthly Charges" readonly>
-<input id="totalPayment" class="locked" placeholder="Total Contract (24 Months)" readonly>
+<h3>Payment Structure</h3>
+
+<input id="baseMonthly" class="locked"
+placeholder="Base Monthly Service Price" readonly>
+
+<label style="display:flex;gap:8px;align-items:center;margin-top:10px;">
+<input type="checkbox" id="enableCommission" onchange="toggleCommission()">
+I agree to profit commission model
+</label>
+
+<input id="customSalary" type="number"
+placeholder="Monthly Salary (Reduced)"
+disabled oninput="calculatePayment()">
+
+<input id="commissionPercent" type="number"
+placeholder="Commission Percentage from Profit"
+disabled oninput="calculatePayment()">
+
+<input id="finalMonthly" class="locked"
+placeholder="Final Monthly Salary Payable" readonly>
+
+<input id="totalPayment" class="locked"
+placeholder="Total Contract Value (24 Months)" readonly>
 
 <textarea class="locked" readonly>
-50% upfront before start
-50% after final delivery
+If commission model is enabled, monthly salary may be reduced.
+Commission will be paid separately based on actual profits.
 </textarea>
+
 
 <h3>Signature</h3>
 <input value="SARR Incorporation" class="locked" readonly>
@@ -196,51 +215,44 @@ border-radius:12px;
 </audio>
 
 <script>
-const services = document.querySelectorAll('#servicePanel input');
+function toggleCommission(){
+const enabled = enableCommission.checked;
+customSalary.disabled = !enabled;
+commissionPercent.disabled = !enabled;
 
-services.forEach(s => s.addEventListener('change', calculateTotal));
-
-function toggleServices(){
-const panel = document.getElementById("servicePanel");
-panel.style.maxHeight = panel.style.maxHeight ? null : panel.scrollHeight + "px";
+if(!enabled){
+customSalary.value = baseMonthly.value;
+commissionPercent.value = "";
+calculatePayment();
+}
 }
 
-function setEndDate(){
-let d = new Date(startDate.value);
-d.setFullYear(d.getFullYear()+2);
-endDate.value = d.toISOString().split("T")[0];
+function calculatePayment(){
+let base = parseInt(baseMonthly.value) || 0;
+let salary = parseInt(customSalary.value) || base;
+
+// validation: salary cannot exceed base price
+if(salary > base){
+salary = base;
+customSalary.value = base;
 }
 
-function calculateTotal(){
-let base = 0;
-services.forEach(s=>{
-if(s.checked) base += parseInt(s.dataset.price);
-});
-baseMonthly.value = base;
-
-let com = parseInt(commission.value)||0;
-finalMonthly.value = base + com;
-totalPayment.value = (base + com) * 24;
+finalMonthly.value = salary;
+totalPayment.value = salary * 24;
 }
 
-function submitContract(){
-document.getElementById("submitSound").play();
-generatePDF();
-document.getElementById("thankyou").style.display="flex";
+pdf.text(`Base Service Price: ${baseMonthly.value}`,10,60);
+pdf.text(`Monthly Salary Payable: ${finalMonthly.value}`,10,70);
+
+if(enableCommission.checked){
+pdf.text(`Commission Model: Enabled`,10,80);
+pdf.text(`Commission Percentage from Profit: ${commissionPercent.value}%`,10,90);
+}else{
+pdf.text(`Commission Model: Not Applicable`,10,80);
 }
 
-function generatePDF(){
-const { jsPDF } = window.jspdf;
-const pdf = new jsPDF();
-
-pdf.text(`ONLINE COLLABORATION AGREEMENT`,10,10);
-pdf.text(`Client: ${spName.value}`,10,20);
-pdf.text(`Final Monthly: ${finalMonthly.value}`,10,30);
-pdf.text(`Total Contract: ${totalPayment.value}`,10,40);
-
-pdf.save("Online_Contract.pdf");
-}
 </script>
+
 
 </body>
 </html>
